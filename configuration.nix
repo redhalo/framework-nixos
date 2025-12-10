@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 let
   # Custom Base16 scheme
@@ -6,9 +6,10 @@ let
 
   # Stylix-colored wallpaper using lutgen
   wallpaper =
-    with config.lib.stylix.colors.withHashtag;
+    with config.lib.stylix.colors;
     pkgs.runCommand "wallpaper.png" { } ''
-      ${pkgs.lutgen}/bin/lutgen apply ${./wallpapers/wallpaper.jpg} -o $out -- \
+      ${pkgs.lutgen}/bin/lutgen apply ${./wallpapers/wallpaper.jpg} -o $out \
+        --lum 0.5 -- \
         ${base00} ${base01} ${base02} ${base03} ${base04} ${base05} ${base06} \
         ${base07} ${base08} ${base09} ${base0A} ${base0B} ${base0C} ${base0D} \
         ${base0E} ${base0F}
@@ -29,7 +30,7 @@ in
   networking.hostName = "framework-13";
   networking.networkmanager.enable = true;
 
-  time.timeZone = "America/New_York";
+  time.timeZone = lib.mkDefault "America/New_York";
 
   i18n.defaultLocale = "en_US.UTF-8";
   i18n.extraLocaleSettings = {
@@ -61,8 +62,8 @@ in
   };
 
   programs.nix-index.enable = true;
-  programs.nix-index-database.comma.enable = true;
-  programs.command-not-found.enable = false;
+  #programs.nix-index-database.comma.enable = true;
+  #programs.command-not-found.enable = false;
 
   ########################################
   # Bootloader + Plymouth
@@ -97,27 +98,20 @@ in
   boot.consoleLogLevel = 0;
 
   ########################################
-  # systemd user units
-  ########################################
-
-  systemd.user.startServices = "sd-switch";
-
-  ########################################
   # GNOME + GDM + Wayland
   ########################################
 
-  services.xserver = {
-    enable = true;
-
-    displayManager.gdm.enable = true;
-    displayManager.gdm.wayland = true;
-
-    desktopManager.gnome.enable = true;
-
-    xkb.layout = "us";
+  services.displayManager = {
+    gdm.enable = true;
+    gdm.wayland = true;
   };
 
-  services.xwayland.enable = true;
+  services.xserver.xkb.layout = "us";
+
+  services.desktopManager.gnome.enable = true;
+
+
+  programs.xwayland.enable = true;
   programs.dconf.enable = true;
 
   # Trim GNOME's default apps a bit
@@ -136,39 +130,40 @@ in
     gnome-clocks
     gnome-tour
     gnome-music
-    gnome-videos
+    #gnome-videos
     gnome-software
   ];
 
   # GNOME & GDM defaults via gsettings (GDM reads these)
-  services.gnome.gsettings = {
-    enable = true;
-    settings = {
-      # Background/lockscreen/GDM use same Stylix-colored wallpaper
-      "org/gnome/desktop/background" = {
-        picture-uri = wallpaperUri;
-        picture-uri-dark = wallpaperUri;
-      };
+  programs.dconf.profiles.gdm = {
+    databases = [{
+      lockAll = true;
+      settings = {
+        # Background/lockscreen/GDM use same Stylix-colored wallpaper
+        "org/gnome/desktop/background" = {
+          picture-uri = wallpaperUri;
+          picture-uri-dark = wallpaperUri;
+        };
 
-      "org/gnome/desktop/screensaver" = {
-        picture-uri = wallpaperUri;
-      };
+        "org/gnome/desktop/screensaver" = {
+          picture-uri = wallpaperUri;
+        };
 
-      # Interface defaults
-      "org/gnome/desktop/interface" = {
-        color-scheme = "prefer-dark";
-        clock-format = "12h";
-        show-clock-date = false;
+        # Interface defaults
+        "org/gnome/desktop/interface" = {
+          color-scheme = "prefer-dark";
+          clock-format = "12h";
+          show-clock-date = false;
+        };
       };
-    };
+    }];
   };
 
   ########################################
   # Audio (PipeWire)
   ########################################
 
-  sound.enable = true;
-  hardware.pulseaudio.enable = false;
+  services.pulseaudio.enable = false;
   security.rtkit.enable = true;
 
   services.pipewire = {
@@ -198,16 +193,21 @@ in
 
   services.upower.enable = true;
 
-  services.logind.extraConfig = ''
-    HandleLidSwitchDocked=ignore
-    HandleLidSwitchExternalPower=suspend
-  '';
+  services.logind.settings.Login = {
+    HandleLidSwitchDocked = "ignore";
+    HandleLidSwitchExternalPower= "suspend";
+  };
 
   ########################################
   # Users
   ########################################
+  
+  #Don't allow mutation of users outside of the config.
+  users.mutableUsers = false;
+  users.users.root.initialHashedPassword = "$y$j9T$bzMV86c8qJfFTEVKgVeFH.$wala41vF7kWKzZ3PWo8iWEp2RtuWEehh0WRHCw0NyiA";
 
   users.users."robert" = {
+    initialHashedPassword = "$y$j9T$bzMV86c8qJfFTEVKgVeFH.$wala41vF7kWKzZ3PWo8iWEp2RtuWEehh0WRHCw0NyiA";
     isNormalUser = true;
     description  = "Robert";
     extraGroups  = [ "wheel" "networkmanager" "audio" "video" ];
@@ -232,12 +232,12 @@ in
     polkitPolicyOwners = [ "robert" ];
   };
 
-  programs._1password-shell-plugins = {
-    enable = true;
-    plugins = with pkgs; [
-      gh
-    ];
-  };
+  #programs._1password-shell-plugins = {
+  #  enable = true;
+  #  plugins = with pkgs; [
+  #    gh
+  #  ];
+  #};
 
   # Firefox as allowed browser for 1Password integration
   environment.etc."1password/custom_allowed_browsers" = {
@@ -245,21 +245,6 @@ in
       firefox
     '';
     mode = "0644";
-  };
-
-  ########################################
-  # Ghostty terminal
-  ########################################
-
-  programs.ghostty = {
-    enable = true;
-    package = pkgs.ghostty;
-    enableZshIntegration = true;
-
-    settings = {
-      "font-family" = "FiraCode Nerd Font Mono";
-      "font-size" = 11;
-    };
   };
 
   ########################################
@@ -279,8 +264,7 @@ in
         Fingerprinting = true;
       };
       DisablePocket = true;
-      DisableFirefoxAccounts = true;
-      DisableAccounts = true;
+      DisableFirefoxAccounts = false;
       DisableFirefoxScreenshots = true;
       OverrideFirstRunPage = "";
       OverridePostUpdatePage = "";
@@ -311,19 +295,6 @@ in
 
   programs.gamemode.enable = true;
 
-  programs.mangohud = {
-    enable = true;
-    enableSessionWide = false;
-    settings = {
-      full = true;
-      fps_limit = 0;
-      gpu_stats = true;
-      cpu_stats = true;
-      frametime = true;
-      position = "top-right";
-    };
-  };
-
   ########################################
   # Packages (system-wide)
   ########################################
@@ -333,7 +304,6 @@ in
     git
     wget
     curl
-    gnome.gnome-tweaks
     gnomeExtensions.appindicator
 
     protonup-qt
@@ -363,10 +333,9 @@ in
   # Graphics
   ########################################
 
-  hardware.opengl = {
+  hardware.graphics = {
     enable = true;
-    driSupport = true;
-    driSupport32Bit = true;
+    enable32Bit = true;
   };
 
   ########################################
@@ -402,10 +371,14 @@ in
     directories = [
       "/etc/nixos"
       "/etc/NetworkManager/system-connections"
+      "/etc/gdm"
       "/var/log"
+      "/var/lib/fprint"
+      "/var/lib/systemd"
       "/var/lib/nixos"
       "/var/lib/systemd/coredump"
       "/var/lib/NetworkManager"
+      "/var/lib/AccountsService" # Needed to show profile picture of user
     ];
 
     files = [
@@ -431,9 +404,14 @@ in
         ".ssh"
         ".gnupg"
 
+	".cache/mozilla/firefox"
+        ".mozilla/firefox"
+
         ".local/share/Steam"
         ".steam"
       ];
+
+      files = [ ];
     };
   };
 
@@ -450,7 +428,7 @@ in
 
     fonts = {
       monospace = {
-        package = pkgs.nerdfonts.override { fonts = [ "FiraCode" ]; };
+        package = pkgs.nerd-fonts.fira-code;
         name = "FiraCode Nerd Font Mono";
       };
       sansSerif = {
@@ -468,10 +446,18 @@ in
     };
 
     cursor = {
-      package = pkgs.phinger-cursors;
-      name = "phinger-cursors";
+      package = pkgs.capitaine-cursors;
+      name = "capitaine-cursors";
       size = 24;
     };
+
+    icons = {
+      enable = true;
+      package = pkgs.vimix-icon-theme;
+      dark = "Vimix";
+      light = "Vimix";
+    };
+
 
     homeManagerIntegration = {
       autoImport = true;
@@ -479,12 +465,6 @@ in
     };
 
     targets = {
-      firefox = {
-        enable = true;
-        profileNames = [ "user" ];
-        firefoxGnomeTheme.enable = true;
-      };
-
       # Don't theme console or Plymouth
       console.enable = false;
       plymouth.enable = false;
@@ -498,8 +478,8 @@ in
   programs.vscode = {
     enable = true;
     package = pkgs.vscode;
-    enableUpdateCheck = false;
-    enableExtensionUpdateCheck = false;
+    #enableUpdateCheck = false;
+    #enableExtensionUpdateCheck = false;
   };
 
   ########################################

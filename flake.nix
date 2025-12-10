@@ -6,9 +6,9 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     # Secondary stable channel
-    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-25.11";
 
-    home-manager.url = "github:nix-community/home-manager/release-24.05";
+    home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
     nixos-hardware.url = "github:NixOS/nixos-hardware";
@@ -19,7 +19,7 @@
       inputs.home-manager.follows = "home-manager";
     };
 
-    _1password-shell-plugins.url = "github:1Password/shell-plugins";
+    #_1password-shell-plugins.url = "github:1Password/shell-plugins";
 
     impermanence = {
       url = "github:nix-community/impermanence";
@@ -34,7 +34,7 @@
     , home-manager
     , nixos-hardware
     , stylix
-    , _1password-shell-plugins
+    #, _1password-shell-plugins
     , impermanence
     , ...
     }:
@@ -55,7 +55,7 @@
           impermanence.nixosModules.impermanence
 
           # 1Password shell plugins
-          _1password-shell-plugins.nixosModules.default
+          #_1password-shell-plugins.nixosModules.default
 
           # Overlay: expose stable as pkgs.stable
           {

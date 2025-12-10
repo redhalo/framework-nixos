@@ -20,7 +20,7 @@
             ESP = {
               name = "ESP";
               type = "EF00";
-              end  = "1G";  # 1 GiB EFI system partition
+              size  = "1G";  # 1 GiB EFI system partition
               content = {
                 type = "filesystem";
                 format = "vfat";
@@ -41,7 +41,7 @@
 
             root = {
               name = "root";
-              end  = "-0";  # use the rest of the disk
+              size  = "100%";  # use the rest of the disk
               content = {
                 type = "btrfs";
 

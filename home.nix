@@ -3,7 +3,7 @@
 let
   # Recolored profile image for ~/.face using Stylix base16 colors
   stylixFace =
-    with config.lib.stylix.colors.withHashtag;
+    with config.lib.stylix.colors;
     pkgs.runCommand "robert-face.png" { } ''
       ${pkgs.lutgen}/bin/lutgen apply ${./avatars/profile.png} -o $out -- \
         ${base00} ${base01} ${base02} ${base03} ${base04} ${base05} ${base06} \
@@ -16,6 +16,12 @@ in
   home.homeDirectory = "/home/robert";
 
   programs.home-manager.enable = true;
+  
+  ########################################
+  # systemd user units
+  ########################################
+
+  systemd.user.startServices = "sd-switch";
 
   ########################################
   # Packages (CLI + Python dev + GNOME extensions)
@@ -30,12 +36,11 @@ in
       fd
 
       # Python toolchain
-      python312Full
+      python315
       pipx
       virtualenv
       poetry
 
-      ipython
       black
       ruff
       mypy
@@ -65,8 +70,8 @@ in
 
   programs.git = {
     enable = true;
-    userName  = "Robert";
-    userEmail = "robert@example.com"; # change this
+    settings.user.name  = "Robert McCoy";
+    settings.user.email = "robertmccoy1981@gmail.com"; # change this
   };
 
   ########################################
@@ -75,6 +80,8 @@ in
 
   programs.zsh = {
     enable = true;
+
+    history.path = "${config.xdg.dataHome}/zsh/zsh_history";
 
     oh-my-zsh = {
       enable = true;
@@ -94,13 +101,45 @@ in
       gl = "git pull";
     };
 
-    initExtra = ''
+    initContent = lib.mkOrder 1200 ''
       HISTSIZE=5000
       SAVEHIST=5000
       setopt EXTENDED_HISTORY SHARE_HISTORY HIST_IGNORE_DUPS HIST_VERIFY
 
       export EDITOR="nvim"
     '';
+  };
+  
+  ########################################
+  # Ghostty terminal
+  ########################################
+
+  programs.ghostty = {
+    enable = true;
+    package = pkgs.ghostty;
+    enableZshIntegration = true;
+
+    settings = {
+      "font-family" = "FiraCode Nerd Font Mono";
+      "font-size" = 11;
+    };
+  };
+  
+  ########################################
+  # Gaming: Steam + Proton + Gamescope + MangoHud + Gamemode
+  ########################################
+
+  programs.mangohud = {
+    enable = true;
+    enableSessionWide = false;
+    settings = {
+      full = true;
+      fps_limit = 0;
+      gpu_stats = true;
+      cpu_stats = true;
+      frametime = true;
+      position = "top-right";
+    };
   };
 
   ########################################
@@ -234,6 +273,19 @@ in
       switch-input-source-backward = [ ];
     };
 
+    "org/gnome/shell/keybindings" = lib.mkDefault {
+      switch-to-application-1 = [ ];
+      switch-to-application-2 = [ ];
+      switch-to-application-3 = [ ];
+      switch-to-application-4 = [ ];
+      switch-to-application-5 = [ ];
+      switch-to-application-6 = [ ];
+      switch-to-application-7 = [ ];
+      switch-to-application-8 = [ ];
+      switch-to-application-9 = [ ];
+      switch-to-application-10 = [ ];
+    };
+
     "org/gnome/shell/extensions/paperwm/keybindings" = lib.mkDefault {
       center = [ "<Super>c" ];
       center-horizontally = [ ];
@@ -316,7 +368,7 @@ in
     };
 
     # Blur my shell pipelines, using Stylix colors
-    "org/gnome/shell/extensions/blur-my-shell" = with lib.hm.gvariant; {
+    "org/gnome/shell/extensions/blur-my-shell" = with lib.gvariant; {
       pipelines = [
         (mkDictionaryEntry "pipeline_default" ([
           (mkDictionaryEntry "name" (mkVariant "Default"))
@@ -341,6 +393,7 @@ in
             ])
           ]))
         ]))
+
         (mkDictionaryEntry "pipeline_default_rounded" ([
           (mkDictionaryEntry "name" (mkVariant "Default rounded"))
           (mkDictionaryEntry "effects" (mkVariant [
@@ -362,50 +415,51 @@ in
           ]))
         ]))
       ];
+      
       settings-version = 2;
     };
 
     "org/gnome/shell/extensions/openbar" = {
-      bartype = "Mainland";
-      bwidth = 0.0;
-      font = config.stylix.fonts.sansSerif.name + " Bold " + toString config.stylix.fonts.sizes.applications;
-      neon = false;
-      menu-radius = 15;
-      hpad = 1.0;
-      vpad = 4.0;
-      height = 32;
-      fgcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
-      hcolor = [ "${base0D-dec-r}" "${base0D-dec-g}" "${base0D-dec-b}" ];
-      dark-fgcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
-      mfgcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
-      dark-mfgcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
-      mbgcolor = [ "${base00-dec-r}" "${base00-dec-g}" "${base00-dec-b}" ];
-      dark-mbgcolor = [ "${base00-dec-r}" "${base00-dec-g}" "${base00-dec-b}" ];
-      mbcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
-      dark-mbcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
-      smbgcolor = [ "${base02-dec-r}" "${base02-dec-g}" "${base02-dec-b}" ];
-      dark-smbgcolor = [ "${base02-dec-r}" "${base02-dec-g}" "${base02-dec-b}" ];
-      mscolor = [ "${base0D-dec-r}" "${base0D-dec-g}" "${base0D-dec-b}" ];
-      dark-mscolor = [ "${base0D-dec-r}" "${base0D-dec-g}" "${base0D-dec-b}" ];
-      mhcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
-      dark-mhcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
-      bgalpha = 0.0;
-      mfgalpha = 1.0;
-      mbgalpha = 1.0;
-      mbalpha = 0.15;
-      mhalpha = 0.15;
-      mshalpha = 0.0;
-      menustyle = true;
-      autohg-bar = false;
-      autohg-menu = false;
-      autotheme-refresh = false;
-      auto-bgalpha = false;
-      autofg-bar = false;
-      reloadstyle = true;
-      autofg-menu = false;
-      trigger-reload = true;
-      smbgoverride = true;
-      accent-override = false;
+        bartype = "Mainland";
+        bwidth = 0.0;
+        font = config.stylix.fonts.sansSerif.name + " Bold " + toString config.stylix.fonts.sizes.applications;
+        neon = false;
+        menu-radius = 15;
+        hpad = 1.0;
+        vpad = 4.0;
+        height = 32;
+        fgcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
+        hcolor = [ "${base0D-dec-r}" "${base0D-dec-g}" "${base0D-dec-b}" ];
+        dark-fgcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
+        mfgcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
+        dark-mfgcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
+        mbgcolor = [ "${base00-dec-r}" "${base00-dec-g}" "${base00-dec-b}" ];
+        dark-mbgcolor = [ "${base00-dec-r}" "${base00-dec-g}" "${base00-dec-b}" ];
+        mbcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
+        dark-mbcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
+        smbgcolor = [ "${base02-dec-r}" "${base02-dec-g}" "${base02-dec-b}" ];
+        dark-smbgcolor = [ "${base02-dec-r}" "${base02-dec-g}" "${base02-dec-b}" ];
+        mscolor = [ "${base0D-dec-r}" "${base0D-dec-g}" "${base0D-dec-b}" ];
+        dark-mscolor = [ "${base0D-dec-r}" "${base0D-dec-g}" "${base0D-dec-b}" ];
+        mhcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
+        dark-mhcolor = [ "${base05-dec-r}" "${base05-dec-g}" "${base05-dec-b}" ];
+        bgalpha = 0.0;
+        mfgalpha = 1.0;
+        mbgalpha = 1.0;
+        mbalpha = 0.15;
+        mhalpha = 0.15;
+        mshalpha = 0.0;
+        menustyle = true;
+        autohg-bar = false;
+        autohg-menu = false;
+        autotheme-refresh = false;
+        auto-bgalpha = false;
+        autofg-bar = false;
+        reloadstyle = true;
+        autofg-menu = false;
+        trigger-reload = true;
+        smbgoverride = true;
+        accent-override = false;
     };
 
     "org/gnome/shell/extensions/paperwm" = {
@@ -456,12 +510,11 @@ in
       search = {
         engines = {
           "Nix Packages" = {
+            definedAliases = [ "@np" ];
             urls = [{
               template = "https://search.nixos.org/packages";
               params = [{ name = "query"; value = "{searchTerms}"; }];
             }];
-            icon = "${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg";
-            definedAliases = [ "@np" ];
           };
 
           "Nix Options" = {
@@ -475,17 +528,6 @@ in
 
         force = true;
       };
-
-      userChrome = ''
-        #TabsToolbar {
-          visibility: collapse !important;
-          margin-bottom: 21px !important;
-        }
-
-        #sidebar-box[sidebarcommand="treestyletab_piro_sakura_ne_jp-sidebar-action"] #sidebar-header {
-          visibility: collapse !important;
-        }
-      '';
     };
   };
 
@@ -520,6 +562,11 @@ in
   ########################################
 
   stylix.targets = {
+    firefox = {
+      enable = true;
+      profileNames = [ "user" ];
+      firefoxGnomeTheme.enable = true;
+    };  
     ghostty.enable = true;
     nixcord.enable = true;
   };
